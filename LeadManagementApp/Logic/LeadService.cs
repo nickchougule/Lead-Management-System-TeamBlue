@@ -1,8 +1,9 @@
+// Logic/LeadService.cs
 using LeadManagementSystem.Interfaces;
 
 namespace LeadManagementSystem.Logic;
 
-public class LeadService
+public class LeadService : ILeadService // Implementing ISP
 {
     private readonly ILeadRepository _repo;
 
@@ -34,12 +35,22 @@ public class LeadService
     public string ConvertToCustomer(int leadId)
     {
         var lead = _repo.GetLeadById(leadId);
-        if (lead != null && lead.Status == "Qualified")
+        if (lead != null && lead.Status.Trim().ToLower() == "qualified")
         {
             lead.Status = "Converted";
             _repo.UpdateLead(lead);
             return "Success: Lead has been converted to a Customer.";
         }
-        return "Error: Only 'Qualified' leads can be converted.";
+        return $"Error: Only 'Qualified' leads can be converted. Current status is: '{lead?.Status}'";
+    }
+
+    // NEW: Delete Logic
+    public string DeleteLead(int leadId)
+    {
+        var lead = _repo.GetLeadById(leadId);
+        if (lead == null) return "Error: Lead not found.";
+
+        _repo.DeleteLead(leadId);
+        return $"Success: Lead ID {leadId} and all related data have been deleted.";
     }
 }

@@ -103,6 +103,41 @@ namespace LeadManagementApp.Migrations
                     b.ToTable("Leads");
                 });
 
+            modelBuilder.Entity("LeadManagementSystem.Models.Quotation", b =>
+                {
+                    b.Property<int>("QuoteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("QuoteId"));
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LeadId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("QuoteDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("QuoteNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("QuoteId");
+
+                    b.HasIndex("LeadId");
+
+                    b.ToTable("Quotations");
+                });
+
             modelBuilder.Entity("LeadManagementSystem.Models.SalesRep", b =>
                 {
                     b.Property<int>("RepId")
@@ -149,9 +184,22 @@ namespace LeadManagementApp.Migrations
                     b.Navigation("AssignedRep");
                 });
 
+            modelBuilder.Entity("LeadManagementSystem.Models.Quotation", b =>
+                {
+                    b.HasOne("LeadManagementSystem.Models.Lead", "Lead")
+                        .WithMany("Quotations")
+                        .HasForeignKey("LeadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lead");
+                });
+
             modelBuilder.Entity("LeadManagementSystem.Models.Lead", b =>
                 {
                     b.Navigation("Interactions");
+
+                    b.Navigation("Quotations");
                 });
 
             modelBuilder.Entity("LeadManagementSystem.Models.SalesRep", b =>
