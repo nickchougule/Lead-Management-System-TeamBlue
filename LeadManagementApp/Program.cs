@@ -1,5 +1,4 @@
-﻿// Program.cs
-using LeadManagementSystem.Models;
+﻿using LeadManagementSystem.Models;
 using LeadManagementSystem.Data;
 using LeadManagementSystem.Logic;
 using LeadManagementSystem.Utilities;
@@ -13,16 +12,13 @@ class Program
     {
         using var dbContext = new LeadDbContext();
         
-        // 1. Repositories
         ILeadRepository leadRepo = new LeadRepository(dbContext);
         IInteractionRepository interactionRepo = new InteractionRepository(dbContext);
-        IQuotationRepository quoteRepo = new QuotationRepository(dbContext); // New Quote Repo
+        IQuotationRepository quoteRepo = new QuotationRepository(dbContext); 
         
-        // 2. Services
         ILeadService leadService = new LeadService(leadRepo);
         IReportService reportService = new ReportService(leadRepo);
 
-        // Seed default Sales Rep so we can assign leads
         SeedData(dbContext);
 
         bool exit = false;
@@ -35,24 +31,30 @@ class Program
             Console.WriteLine("3. Update Lead Status or Priority");
             Console.WriteLine("4. Qualify & Convert Lead to Customer");
             Console.WriteLine("5. View Lead Analytics Report");
-            Console.WriteLine("6. Create Quotation for a Lead"); // NEW OPTION
+            Console.WriteLine("6. Create Quotation for a Lead"); 
             Console.WriteLine("7. Delete a Lead");
             Console.WriteLine("8. Exit");
             Console.Write("\nSelect an option: ");
 
-            switch (Console.ReadLine())
+            // Read the input securely
+            string? input = Console.ReadLine();
+
+            // If the user just randomly hits Enter, ignore it and redraw the menu
+            if (string.IsNullOrWhiteSpace(input)) continue;
+
+            switch (input)
             {
                 case "1": AddNewLead(leadRepo); break;
                 case "2": RecordInteraction(leadRepo, interactionRepo); break;
                 case "3": UpdateLeadAttributes(leadService); break;
                 case "4": ConvertLead(leadService); break;
                 case "5": ShowReports(reportService); break;
-                case "6": CreateQuotation(leadRepo, quoteRepo); break; // NEW METHOD CALL
+                case "6": CreateQuotation(leadRepo, quoteRepo); break; 
                 case "7": DeleteLeadRecord(leadService); break;
                 case "8": exit = true; break;
                 default:
-                    Console.WriteLine("Invalid selection. Press any key...");
-                    Console.ReadKey();
+                    Console.WriteLine("Invalid selection.");
+                    Pause();
                     break;
             }
         }
@@ -60,7 +62,6 @@ class Program
 
     static void SeedData(LeadDbContext context)
     {
-        // We only seed the Sales Rep now. Leads and Quotes are user-driven!
         if (!context.SalesRepresentatives.Any())
         {
             context.SalesRepresentatives.Add(new SalesRep { Name = "Default Rep", Email = "rep@company.com", Department = "Sales" });
@@ -93,12 +94,12 @@ class Program
             Status = "New",
             Priority = "Medium",
             Source = "Manual Entry",
-            AssignedToRepId = 1 // Automatically assign to our seeded default rep
+            AssignedToRepId = 1 
         };
 
         repo.AddLead(lead);
-        Console.WriteLine("\nLead created successfully! Press any key...");
-        Console.ReadKey();
+        Console.WriteLine("\nLead created successfully!");
+        Pause();
     }
 
     static void UpdateLeadAttributes(ILeadService service)
@@ -120,7 +121,7 @@ class Program
             string priority = InputValidator.GetRequiredString("Enter new priority: ");
             Console.WriteLine(service.UpdatePriority(id, priority));
         }
-        Console.ReadKey();
+        Pause();
     }
 
     static void RecordInteraction(ILeadRepository leadRepo, IInteractionRepository interactionRepo)
@@ -132,7 +133,7 @@ class Program
         if (lead == null)
         {
             Console.WriteLine("Lead not found.");
-            Console.ReadKey();
+            Pause();
             return;
         }
 
@@ -149,7 +150,7 @@ class Program
 
         interactionRepo.AddInteraction(interaction);
         Console.WriteLine("Interaction recorded successfully.");
-        Console.ReadKey();
+        Pause();
     }
 
     static void ConvertLead(ILeadService service)
@@ -157,7 +158,7 @@ class Program
         Console.WriteLine("\n--- Convert Lead ---");
         int id = InputValidator.GetValidInt("Enter Lead ID to Convert: ");
         Console.WriteLine(service.ConvertToCustomer(id));
-        Console.ReadKey();
+        Pause();
     }
 
     static void ShowReports(IReportService service)
@@ -168,11 +169,9 @@ class Program
         {
             Console.WriteLine($"{stat.Key}: {stat.Value}");
         }
-        Console.WriteLine("\nPress any key to return...");
-        Console.ReadKey();
+        Pause();
     }
 
-    // NEW METHOD: Creating a Quotation manually
     static void CreateQuotation(ILeadRepository leadRepo, IQuotationRepository quoteRepo)
     {
         Console.WriteLine("\n--- Create Quotation ---");
@@ -182,7 +181,7 @@ class Program
         if (lead == null)
         {
             Console.WriteLine("Error: Lead not found.");
-            Console.ReadKey();
+            Pause();
             return;
         }
 
@@ -196,7 +195,7 @@ class Program
                 QuoteNumber = quoteNumber,
                 TotalAmount = amount,
                 Status = "Draft",
-                LeadId = leadId // Here is where we make the connection!
+                LeadId = leadId 
             };
 
             quoteRepo.AddQuotation(quote);
@@ -206,7 +205,7 @@ class Program
         {
             Console.WriteLine("Error: Invalid amount entered.");
         }
-        Console.ReadKey();
+        Pause();
     }
 
     static void DeleteLeadRecord(ILeadService service)
@@ -216,6 +215,13 @@ class Program
         int id = InputValidator.GetValidInt("Enter Lead ID to Delete: ");
         
         Console.WriteLine(service.DeleteLead(id));
-        Console.ReadKey();
+        Pause();
+    }
+
+    // Helper method to standardize the pause and fix the VS Code terminal glitch
+    static void Pause()
+    {
+        Console.WriteLine("\nPress ENTER to return to the menu...");
+        Console.ReadLine();
     }
 }
