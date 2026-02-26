@@ -13,7 +13,7 @@ public class LeadDbContext : DbContext
     {
         options.UseSqlServer("Server=localhost;Database=CRM_LeadManagement;User Id=sa;Password=Nikhil@1234;TrustServerCertificate=True");
     }
-
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Lead>().HasKey(l => l.LeadId);

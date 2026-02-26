@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LeadManagementApp.Migrations
 {
     [DbContext(typeof(LeadDbContext))]
-    [Migration("20260221190402_InitialLeadSchema")]
-    partial class InitialLeadSchema
+    [Migration("20260226044557_Initial_create")]
+    partial class Initial_create
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -82,6 +82,9 @@ namespace LeadManagementApp.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Position")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Priority")
