@@ -1,19 +1,25 @@
 using LeadManagementSystem.Models;
+using LeadManagementSystem.Interfaces;
 
 namespace LeadManagementSystem.Data;
 
-public class InteractionRepository
+public class InteractionRepository : IInteractionRepository
 {
+    private readonly LeadDbContext _context;
+
+    public InteractionRepository(LeadDbContext context)
+    {
+        _context = context;
+    }
+
     public void AddInteraction(Interaction interaction)
     {
-        using LeadDbContext context = new LeadDbContext();
-        context.Interactions.Add(interaction); // Using EF Core for automated relationship handling
-        context.SaveChanges();
+        _context.Interactions.Add(interaction);
+        _context.SaveChanges();
     }
 
     public List<Interaction> GetInteractionsByLead(int leadId)
     {
-        using LeadDbContext context = new LeadDbContext();
-        return context.Interactions.Where(i => i.LeadId == leadId).ToList();
+        return _context.Interactions.Where(i => i.LeadId == leadId).ToList();
     }
 }

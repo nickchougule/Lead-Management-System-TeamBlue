@@ -1,22 +1,22 @@
-using LeadManagementSystem.Data;
+using LeadManagementSystem.Interfaces;
 
 namespace LeadManagementSystem.Logic;
 
 public class ReportService
 {
-    private readonly LeadRepository _repo = new();
+    private readonly ILeadRepository _repo;
 
-    // Generate Lead Analytics 
-    public void ShowLeadStatusDistribution()
+    // SOLID: Constructor Injection
+    public ReportService(ILeadRepository repo) 
+    {
+        _repo = repo;
+    }
+
+    // SOLID: Return data, don't use Console.WriteLine here
+    public Dictionary<string, int> GetLeadStatusDistribution()
     {
         var leads = _repo.GetAllLeads();
-        var stats = leads.GroupBy(l => l.Status)
-                         .Select(g => new { Status = g.Key, Count = g.Count() });
-
-        Console.WriteLine("\n--- Lead Status Distribution ---");
-        foreach (var item in stats)
-        {
-            Console.WriteLine($"{item.Status}: {item.Count}");
-        }
+        return leads.GroupBy(l => l.Status)
+                    .ToDictionary(g => g.Key, g => g.Count());
     }
 }
