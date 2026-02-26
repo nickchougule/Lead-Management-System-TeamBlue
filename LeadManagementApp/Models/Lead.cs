@@ -8,7 +8,7 @@ public class Lead
     public string? Email { get; set; }
     public string? Phone { get; set; }
     public string? Company { get; set; }
-    public string? Position { get; set; } // Added required field
+    public string? Position { get; set; }
     public string Status { get; set; } = "New"; 
     public string Source { get; set; } = "Website";
     public string Priority { get; set; } = "Medium";
@@ -16,5 +16,8 @@ public class Lead
 
     public int? AssignedToRepId { get; set; }
     public virtual SalesRep? AssignedRep { get; set; }
+    
+    // Relationships
     public virtual ICollection<Interaction> Interactions { get; set; } = new List<Interaction>();
+    public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 }

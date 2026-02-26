@@ -1,18 +1,17 @@
+// Logic/ReportService.cs
 using LeadManagementSystem.Interfaces;
 
 namespace LeadManagementSystem.Logic;
 
-public class ReportService
+public class ReportService : IReportService // Implementing ISP
 {
     private readonly ILeadRepository _repo;
 
-    // SOLID: Constructor Injection
     public ReportService(ILeadRepository repo) 
     {
         _repo = repo;
     }
 
-    // SOLID: Return data, don't use Console.WriteLine here
     public Dictionary<string, int> GetLeadStatusDistribution()
     {
         var leads = _repo.GetAllLeads();
