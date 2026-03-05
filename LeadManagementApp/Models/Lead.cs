@@ -12,7 +12,7 @@ public class Lead
     public string Status { get; set; } = "New"; 
     public string Source { get; set; } = "Website";
     public string Priority { get; set; } = "Medium";
-    public DateTime CreatedDate { get; set; } = DateTime.Now;
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
     public int? AssignedToRepId { get; set; }
     public virtual SalesRep? AssignedRep { get; set; }
@@ -20,4 +20,5 @@ public class Lead
     // Relationships
     public virtual ICollection<Interaction> Interactions { get; set; } = new List<Interaction>();
     public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
+    public virtual Customer? Customer { get; set; }
 }

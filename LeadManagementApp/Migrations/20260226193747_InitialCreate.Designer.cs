@@ -4,6 +4,7 @@ using LeadManagementSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LeadManagementApp.Migrations
 {
     [DbContext(typeof(LeadDbContext))]
-    partial class LeadDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260226193747_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,41 +24,6 @@ namespace LeadManagementApp.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("LeadManagementSystem.Models.Customer", b =>
-                {
-                    b.Property<int>("CustomerId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
-
-                    b.Property<string>("Company")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("ConvertedByRepId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("ConvertedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("LeadId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("CustomerId");
-
-                    b.HasIndex("LeadId")
-                        .IsUnique();
-
-                    b.ToTable("Customers");
-                });
 
             modelBuilder.Entity("LeadManagementSystem.Models.Interaction", b =>
                 {
@@ -164,7 +132,6 @@ namespace LeadManagementApp.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("QuoteId");
@@ -197,17 +164,6 @@ namespace LeadManagementApp.Migrations
                     b.HasKey("RepId");
 
                     b.ToTable("SalesRepresentatives");
-                });
-
-            modelBuilder.Entity("LeadManagementSystem.Models.Customer", b =>
-                {
-                    b.HasOne("LeadManagementSystem.Models.Lead", "Lead")
-                        .WithOne("Customer")
-                        .HasForeignKey("LeadManagementSystem.Models.Customer", "LeadId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Lead");
                 });
 
             modelBuilder.Entity("LeadManagementSystem.Models.Interaction", b =>
@@ -244,8 +200,6 @@ namespace LeadManagementApp.Migrations
 
             modelBuilder.Entity("LeadManagementSystem.Models.Lead", b =>
                 {
-                    b.Navigation("Customer");
-
                     b.Navigation("Interactions");
 
                     b.Navigation("Quotations");

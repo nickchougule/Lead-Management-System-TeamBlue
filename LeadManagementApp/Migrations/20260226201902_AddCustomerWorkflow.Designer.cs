@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LeadManagementApp.Migrations
 {
     [DbContext(typeof(LeadDbContext))]
-    [Migration("20260226180252_Initial_Create")]
-    partial class Initial_Create
+    [Migration("20260226201902_AddCustomerWorkflow")]
+    partial class AddCustomerWorkflow
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,38 @@ namespace LeadManagementApp.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("LeadManagementSystem.Models.Customer", b =>
+                {
+                    b.Property<int>("CustomerId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
+
+                    b.Property<string>("Company")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ConvertedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("LeadId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("CustomerId");
+
+                    b.HasIndex("LeadId")
+                        .IsUnique();
+
+                    b.ToTable("Customers");
+                });
 
             modelBuilder.Entity("LeadManagementSystem.Models.Interaction", b =>
                 {
@@ -166,6 +198,17 @@ namespace LeadManagementApp.Migrations
                     b.ToTable("SalesRepresentatives");
                 });
 
+            modelBuilder.Entity("LeadManagementSystem.Models.Customer", b =>
+                {
+                    b.HasOne("LeadManagementSystem.Models.Lead", "Lead")
+                        .WithOne("Customer")
+                        .HasForeignKey("LeadManagementSystem.Models.Customer", "LeadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lead");
+                });
+
             modelBuilder.Entity("LeadManagementSystem.Models.Interaction", b =>
                 {
                     b.HasOne("LeadManagementSystem.Models.Lead", "Lead")
@@ -200,6 +243,8 @@ namespace LeadManagementApp.Migrations
 
             modelBuilder.Entity("LeadManagementSystem.Models.Lead", b =>
                 {
+                    b.Navigation("Customer");
+
                     b.Navigation("Interactions");
 
                     b.Navigation("Quotations");

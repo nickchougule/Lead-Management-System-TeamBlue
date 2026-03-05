@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LeadManagementApp.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial_create : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -77,6 +77,30 @@ namespace LeadManagementApp.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "Quotations",
+                columns: table => new
+                {
+                    QuoteId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    QuoteNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    QuoteDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    LeadId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Quotations", x => x.QuoteId);
+                    table.ForeignKey(
+                        name: "FK_Quotations_Leads_LeadId",
+                        column: x => x.LeadId,
+                        principalTable: "Leads",
+                        principalColumn: "LeadId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Interactions_LeadId",
                 table: "Interactions",
@@ -86,6 +110,11 @@ namespace LeadManagementApp.Migrations
                 name: "IX_Leads_AssignedToRepId",
                 table: "Leads",
                 column: "AssignedToRepId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Quotations_LeadId",
+                table: "Quotations",
+                column: "LeadId");
         }
 
         /// <inheritdoc />
@@ -93,6 +122,9 @@ namespace LeadManagementApp.Migrations
         {
             migrationBuilder.DropTable(
                 name: "Interactions");
+
+            migrationBuilder.DropTable(
+                name: "Quotations");
 
             migrationBuilder.DropTable(
                 name: "Leads");

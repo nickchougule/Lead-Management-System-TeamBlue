@@ -1,9 +1,9 @@
-﻿// Program.cs
-using LeadManagementSystem.Models;
 using LeadManagementSystem.Data;
-using LeadManagementSystem.Logic;
-using LeadManagementSystem.Utilities;
 using LeadManagementSystem.Interfaces;
+using LeadManagementSystem.Logic;
+using LeadManagementSystem.Models;
+using LeadManagementSystem.Utilities;
+using System.Globalization;
 
 namespace LeadManagementSystem;
 
@@ -11,77 +11,83 @@ class Program
 {
     static void Main(string[] args)
     {
-        using var dbContext = new LeadDbContext();
-        
-        // 1. Repositories
-        ILeadRepository leadRepo = new LeadRepository(dbContext);
-        IInteractionRepository interactionRepo = new InteractionRepository(dbContext);
-        IQuotationRepository quoteRepo = new QuotationRepository(dbContext); // New Quote Repo
-        
-        // 2. Services
-        ILeadService leadService = new LeadService(leadRepo);
-        IReportService reportService = new ReportService(leadRepo);
+        using var db = new LeadDbContext();
+        ILeadService leadService = new LeadService(new LeadRepository(db), new CustomerRepository(db), db);
+        IInteractionService interactionService = new InteractionService(new InteractionRepository(db));
+        IQuotationService quotationService = new QuotationService(new QuotationRepository(db));
+        IReportService reportService = new ReportService(new LeadRepository(db), new CustomerRepository(db), new QuotationRepository(db));
+        int defaultRepId = SeedDefaultSalesRep(db);
 
-        // Seed default Sales Rep so we can assign leads
-        SeedData(dbContext);
-
-        bool exit = false;
-        while (!exit)
+        while (true)
         {
             Console.Clear();
-            Console.WriteLine("=== CRM: LEAD MANAGEMENT SYSTEM ===");
-            Console.WriteLine("1. Create New Lead");
-            Console.WriteLine("2. Record Interaction (Call/Email)");
-            Console.WriteLine("3. Update Lead Status or Priority");
-            Console.WriteLine("4. Qualify & Convert Lead to Customer");
-            Console.WriteLine("5. View Lead Analytics Report");
-            Console.WriteLine("6. Create Quotation for a Lead"); // NEW OPTION
-            Console.WriteLine("7. Delete a Lead");
-            Console.WriteLine("8. Exit");
+            ShowDueFollowUpReminders(interactionService);
+            ShowMenu();
             Console.Write("\nSelect an option: ");
 
             switch (Console.ReadLine())
             {
-                case "1": AddNewLead(leadRepo); break;
-                case "2": RecordInteraction(leadRepo, interactionRepo); break;
-                case "3": UpdateLeadAttributes(leadService); break;
-                case "4": ConvertLead(leadService); break;
-                case "5": ShowReports(reportService); break;
-                case "6": CreateQuotation(leadRepo, quoteRepo); break; // NEW METHOD CALL
-                case "7": DeleteLeadRecord(leadService); break;
-                case "8": exit = true; break;
-                default:
-                    Console.WriteLine("Invalid selection. Press any key...");
-                    Console.ReadKey();
-                    break;
+                case "1": CreateLead(leadService, db, defaultRepId); break;
+                case "2": ViewLeads(leadService); break;
+                case "3": UpdateLead(leadService); break;
+                case "4": DeleteLead(leadService); break;
+                case "5": CreateInteraction(leadService, interactionService); break;
+                case "6": ViewInteractionsByLead(interactionService); break;
+                case "7": UpdateInteraction(interactionService); break;
+                case "8": DeleteInteraction(interactionService); break;
+                case "9": CreateQuotation(leadService, quotationService); break;
+                case "10": ViewQuotationsByLead(quotationService); break;
+                case "11": UpdateQuotation(quotationService); break;
+                case "12": DeleteQuotation(quotationService); break;
+                case "13": ConvertLeadToCustomer(leadService); break;
+                case "14": ShowReports(reportService); break;
+                case "15": return;
+                default: Pause("Invalid selection. Press any key..."); break;
             }
         }
     }
 
-    static void SeedData(LeadDbContext context)
+    static void ShowMenu()
     {
-        // We only seed the Sales Rep now. Leads and Quotes are user-driven!
-        if (!context.SalesRepresentatives.Any())
-        {
-            context.SalesRepresentatives.Add(new SalesRep { Name = "Default Rep", Email = "rep@company.com", Department = "Sales" });
-            context.SaveChanges();
-        }
+        Console.WriteLine("""
+=== CRM: LEAD MANAGEMENT SYSTEM ===
+1. Create Lead
+2. View Leads
+3. Update Lead Status/Priority
+4. Delete Lead
+5. Create Interaction
+6. View Interactions by Lead
+7. Update Interaction
+8. Delete Interaction
+9. Create Quotation
+10. View Quotations by Lead
+11. Update Quotation
+12. Delete Quotation
+13. Convert Qualified Lead to Customer
+14. View Analytics Report
+15. Exit
+""");
     }
 
-    static void AddNewLead(ILeadRepository repo)
+    static int SeedDefaultSalesRep(LeadDbContext db)
     {
-        Console.WriteLine("\n--- Create New Lead ---");
+        var existingRep = db.SalesRepresentatives.FirstOrDefault();
+        if (existingRep != null) return existingRep.RepId;
+
+        var rep = new SalesRep { Name = "Default Rep", Email = "rep@company.com", Department = "Sales" };
+        db.SalesRepresentatives.Add(rep);
+        db.SaveChanges();
+        return rep.RepId;
+    }
+
+    static void CreateLead(ILeadService service, LeadDbContext db, int defaultRepId)
+    {
+        Console.WriteLine("\n--- Create Lead ---");
         string name = InputValidator.GetRequiredString("Enter Name: ");
         string email = InputValidator.GetRequiredString("Enter Email: ");
-        
-        Console.Write("Enter Phone: ");
-        string? phone = Console.ReadLine();
-        
-        Console.Write("Enter Company: ");
-        string? company = Console.ReadLine();
-
-        Console.Write("Enter Position: ");
-        string? position = Console.ReadLine();
+        Console.Write("Enter Phone: "); var phone = Console.ReadLine();
+        Console.Write("Enter Company: "); var company = Console.ReadLine();
+        Console.Write("Enter Position: "); var position = Console.ReadLine();
 
         var lead = new Lead
         {
@@ -92,130 +98,183 @@ class Program
             Position = string.IsNullOrWhiteSpace(position) ? "N/A" : position,
             Status = "New",
             Priority = "Medium",
-            Source = "Manual Entry",
-            AssignedToRepId = 1 // Automatically assign to our seeded default rep
+            Source = SelectLeadSource(),
+            AssignedToRepId = SelectRepId(db, defaultRepId)
         };
 
-        repo.AddLead(lead);
-        Console.WriteLine("\nLead created successfully! Press any key...");
-        Console.ReadKey();
+        Console.WriteLine($"Lead created. Lead ID: {service.CreateLead(lead).LeadId}");
+        Pause();
     }
 
-    static void UpdateLeadAttributes(ILeadService service)
+    static string SelectLeadSource()
+    {
+        Console.WriteLine("Select Source: 1.Website 2.Referral 3.Cold Call 4.Event 5.Partner");
+        while (true)
+        {
+            switch (Console.ReadLine())
+            {
+                case "1": return "Website";
+                case "2": return "Referral";
+                case "3": return "Cold Call";
+                case "4": return "Event";
+                case "5": return "Partner";
+                default:
+                    Console.Write("Invalid source. Choose 1-5: ");
+                    break;
+            }
+        }
+    }
+
+    static int SelectRepId(LeadDbContext db, int defaultRepId)
+    {
+        Console.WriteLine("Available Sales Reps:");
+        foreach (var rep in db.SalesRepresentatives.OrderBy(r => r.RepId))
+            Console.WriteLine($"{rep.RepId}. {rep.Name} ({rep.Email})");
+
+        while (true)
+        {
+            Console.Write($"Assign Rep ID (press Enter for default {defaultRepId}): ");
+            var input = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(input)) return defaultRepId;
+            if (int.TryParse(input, out var selected) && db.SalesRepresentatives.Any(r => r.RepId == selected)) return selected;
+            Console.WriteLine("Invalid rep id.");
+        }
+    }
+
+    static void ViewLeads(ILeadService service)
+    {
+        Console.WriteLine("\n--- Leads ---");
+        var leads = service.GetAllLeads();
+        if (leads.Count == 0) { Pause("No leads found."); return; }
+
+        foreach (var l in leads)
+            Console.WriteLine($"ID: {l.LeadId} | Name: {l.Name} | Status: {l.Status} | Priority: {l.Priority} | Source: {l.Source} | RepId: {l.AssignedToRepId}");
+        Pause();
+    }
+
+    static void UpdateLead(ILeadService service)
     {
         Console.WriteLine("\n--- Update Lead ---");
         int id = InputValidator.GetValidInt("Enter Lead ID: ");
-        
         Console.WriteLine("1. Update Status (New, Contacted, Qualified, Unqualified)");
         Console.WriteLine("2. Update Priority (Low, Medium, High)");
-        string? choice = Console.ReadLine();
 
-        if (choice == "1")
+        string result = Console.ReadLine() switch
         {
-            string status = InputValidator.GetRequiredString("Enter new status: ");
-            Console.WriteLine(service.UpdateStatus(id, status));
-        }
-        else if (choice == "2")
-        {
-            string priority = InputValidator.GetRequiredString("Enter new priority: ");
-            Console.WriteLine(service.UpdatePriority(id, priority));
-        }
-        Console.ReadKey();
+            "1" => service.UpdateStatus(id, GetAllowedValue("Enter new status", "New", "Contacted", "Qualified", "Unqualified")),
+            "2" => service.UpdatePriority(id, GetAllowedValue("Enter new priority", "Low", "Medium", "High")),
+            _ => "Invalid update option."
+        };
+
+        Console.WriteLine(result);
+        Pause();
     }
 
-    static void RecordInteraction(ILeadRepository leadRepo, IInteractionRepository interactionRepo)
-    {
-        Console.WriteLine("\n--- Record Interaction ---");
-        int leadId = InputValidator.GetValidInt("Enter Lead ID: ");
-        
-        var lead = leadRepo.GetLeadById(leadId);
-        if (lead == null)
-        {
-            Console.WriteLine("Lead not found.");
-            Console.ReadKey();
-            return;
-        }
+    static void DeleteLead(ILeadService service) { Console.WriteLine("\n--- Delete Lead ---\nWARNING: This will delete lead and related records."); Console.WriteLine(service.DeleteLead(InputValidator.GetValidInt("Enter Lead ID to delete: "))); Pause(); }
 
-        string type = InputValidator.GetRequiredString("Type (Call/Email/Meeting): ");
-        string details = InputValidator.GetRequiredString("Details: ");
+    static void CreateInteraction(ILeadService leadService, IInteractionService interactionService)
+    {
+        Console.WriteLine("\n--- Create Interaction ---");
+        int leadId = InputValidator.GetValidInt("Enter Lead ID: ");
+        if (leadService.GetLeadById(leadId) == null) { Pause("Error: Lead not found."); return; }
 
         var interaction = new Interaction
         {
             LeadId = leadId,
-            InteractionType = type,
-            Details = details,
-            InteractionDate = DateTime.Now
+            InteractionType = GetAllowedValue("Type", "Call", "Email", "Meeting"),
+            Details = InputValidator.GetRequiredString("Details: "),
+            InteractionDate = DateTime.UtcNow,
+            FollowUpDate = GetOptionalDate("Follow-up date (yyyy-MM-dd, optional): ")
         };
 
-        interactionRepo.AddInteraction(interaction);
-        Console.WriteLine("Interaction recorded successfully.");
-        Console.ReadKey();
+        Console.WriteLine($"Interaction created. Interaction ID: {interactionService.CreateInteraction(interaction).InteractionId}");
+        Pause();
     }
 
-    static void ConvertLead(ILeadService service)
-    {
-        Console.WriteLine("\n--- Convert Lead ---");
-        int id = InputValidator.GetValidInt("Enter Lead ID to Convert: ");
-        Console.WriteLine(service.ConvertToCustomer(id));
-        Console.ReadKey();
-    }
+    static void ViewInteractionsByLead(IInteractionService service) { Console.WriteLine("\n--- View Interactions by Lead ---"); var list = service.GetInteractionsByLead(InputValidator.GetValidInt("Enter Lead ID: ")); if (list.Count == 0) { Pause("No interactions found for this lead."); return; } foreach (var i in list) Console.WriteLine($"ID: {i.InteractionId} | Type: {i.InteractionType} | Date: {i.InteractionDate:u} | Follow-up: {i.FollowUpDate:yyyy-MM-dd} | Details: {i.Details}"); Pause(); }
+    static void UpdateInteraction(IInteractionService service) { Console.WriteLine("\n--- Update Interaction ---"); Console.WriteLine(service.UpdateInteraction(InputValidator.GetValidInt("Enter Interaction ID: "), GetAllowedValue("Enter new type", "Call", "Email", "Meeting"), InputValidator.GetRequiredString("Enter new details: "), GetOptionalDate("Enter follow-up date (yyyy-MM-dd) or leave empty: "))); Pause(); }
+    static void DeleteInteraction(IInteractionService service) { Console.WriteLine("\n--- Delete Interaction ---"); Console.WriteLine(service.DeleteInteraction(InputValidator.GetValidInt("Enter Interaction ID: "))); Pause(); }
 
-    static void ShowReports(IReportService service)
-    {
-        Console.WriteLine("\n--- Lead Status Distribution ---");
-        var stats = service.GetLeadStatusDistribution();
-        foreach (var stat in stats)
-        {
-            Console.WriteLine($"{stat.Key}: {stat.Value}");
-        }
-        Console.WriteLine("\nPress any key to return...");
-        Console.ReadKey();
-    }
-
-    // NEW METHOD: Creating a Quotation manually
-    static void CreateQuotation(ILeadRepository leadRepo, IQuotationRepository quoteRepo)
+    static void CreateQuotation(ILeadService leadService, IQuotationService quotationService)
     {
         Console.WriteLine("\n--- Create Quotation ---");
-        int leadId = InputValidator.GetValidInt("Enter Lead ID to attach this Quote to: ");
-        
-        var lead = leadRepo.GetLeadById(leadId);
-        if (lead == null)
-        {
-            Console.WriteLine("Error: Lead not found.");
-            Console.ReadKey();
-            return;
-        }
+        int leadId = InputValidator.GetValidInt("Enter Lead ID: ");
+        if (leadService.GetLeadById(leadId) == null) { Pause("Error: Lead not found."); return; }
+        var amount = GetPositiveDecimal("Enter total amount: ");
 
-        string quoteNumber = InputValidator.GetRequiredString("Enter Quote Number (e.g., QT-100): ");
-        Console.Write("Enter Total Amount: ");
-        
-        if (decimal.TryParse(Console.ReadLine(), out decimal amount))
-        {
-            var quote = new Quotation
-            {
-                QuoteNumber = quoteNumber,
-                TotalAmount = amount,
-                Status = "Draft",
-                LeadId = leadId // Here is where we make the connection!
-            };
-
-            quoteRepo.AddQuotation(quote);
-            Console.WriteLine($"\nSuccess! Quotation {quoteNumber} attached to Lead ID {leadId}.");
-        }
-        else
-        {
-            Console.WriteLine("Error: Invalid amount entered.");
-        }
-        Console.ReadKey();
+        var q = new Quotation { LeadId = leadId, QuoteNumber = InputValidator.GetRequiredString("Enter Quote Number: "), TotalAmount = amount, Status = "Draft", QuoteDate = DateTime.UtcNow };
+        Console.WriteLine($"Quotation created. Quotation ID: {quotationService.CreateQuotation(q).QuoteId}");
+        Pause();
     }
 
-    static void DeleteLeadRecord(ILeadService service)
+    static void ViewQuotationsByLead(IQuotationService service) { Console.WriteLine("\n--- View Quotations by Lead ---"); var list = service.GetQuotationsByLead(InputValidator.GetValidInt("Enter Lead ID: ")); if (list.Count == 0) { Pause("No quotations found for this lead."); return; } foreach (var q in list) Console.WriteLine($"ID: {q.QuoteId} | Number: {q.QuoteNumber} | Status: {q.Status} | Amount: {q.TotalAmount}"); Pause(); }
+    static void UpdateQuotation(IQuotationService service) { Console.WriteLine("\n--- Update Quotation ---"); var amount = GetPositiveDecimal("Enter new total amount: "); Console.WriteLine(service.UpdateQuotation(InputValidator.GetValidInt("Enter Quotation ID: "), GetAllowedValue("Enter new status", "Draft", "Sent", "Accepted", "Rejected"), amount, GetOptionalDate("Enter expiry date (yyyy-MM-dd) or leave empty: "))); Pause(); }
+    static void DeleteQuotation(IQuotationService service) { Console.WriteLine("\n--- Delete Quotation ---"); Console.WriteLine(service.DeleteQuotation(InputValidator.GetValidInt("Enter Quotation ID: "))); Pause(); }
+    static void ConvertLeadToCustomer(ILeadService service) { Console.WriteLine("\n--- Convert Lead to Customer ---"); Console.WriteLine(service.ConvertToCustomer(InputValidator.GetValidInt("Enter Qualified Lead ID: "))); Pause(); }
+
+    static void ShowReports(IReportService reportService)
     {
-        Console.WriteLine("\n--- Delete Lead ---");
-        Console.WriteLine("WARNING: This will permanently delete the Lead and Cascade Delete all their Interactions and Quotations.");
-        int id = InputValidator.GetValidInt("Enter Lead ID to Delete: ");
-        
-        Console.WriteLine(service.DeleteLead(id));
-        Console.ReadKey();
+        Console.WriteLine("\n--- Lead Status Distribution ---");
+        foreach (var s in reportService.GetLeadStatusDistribution()) Console.WriteLine($"{s.Key}: {s.Value}");
+
+        Console.WriteLine("\n--- Leads by Source ---");
+        foreach (var s in reportService.GetLeadsBySource()) Console.WriteLine($"{s.Key}: {s.Value}");
+
+        var c = reportService.GetConversionSummary();
+        Console.WriteLine($"\n--- Conversion Summary ---\nTotal Leads: {c.TotalLeads}\nConverted Customers: {c.ConvertedLeads}\nConversion Rate: {c.ConversionRatePercent}%");
+
+        Console.WriteLine("\n--- Sales Rep Performance ---");
+        foreach (var r in reportService.GetSalesRepPerformance()) Console.WriteLine($"{r.Key}: Assigned={r.Value.AssignedLeads}, Converted={r.Value.ConvertedLeads}");
+
+        Console.WriteLine("\n--- Quotation Totals by Status ---");
+        foreach (var q in reportService.GetQuotationTotalsByStatus()) Console.WriteLine($"{q.Key}: {q.Value}");
+
+        Pause("\nPress any key to return...");
     }
+
+    static void ShowDueFollowUpReminders(IInteractionService interactionService)
+    {
+        var today = DateTime.UtcNow.Date;
+        var due = interactionService.GetAllInteractions().Where(i => i.FollowUpDate.HasValue && i.FollowUpDate.Value.Date <= today).ToList();
+        if (due.Count == 0) return;
+
+        Console.WriteLine($"REMINDER: {due.Count} interaction(s) have due follow-ups.");
+        foreach (var i in due.Take(3)) Console.WriteLine($"  Lead {i.LeadId}, Interaction {i.InteractionId}, Due {i.FollowUpDate:yyyy-MM-dd}");
+        Console.WriteLine();
+    }
+
+    static DateTime? GetOptionalDate(string prompt)
+    {
+        while (true)
+        {
+            Console.Write(prompt);
+            var input = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(input)) return null;
+            if (DateTime.TryParseExact(input, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d;
+            Console.WriteLine("Invalid date. Use yyyy-MM-dd or leave empty.");
+        }
+    }
+
+    static string GetAllowedValue(string label, params string[] allowed)
+    {
+        while (true)
+        {
+            Console.Write($"{label} ({string.Join("/", allowed)}): ");
+            var input = Console.ReadLine();
+            var selected = allowed.FirstOrDefault(v => string.Equals(v, input?.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (selected != null) return selected;
+            Console.WriteLine("Invalid option.");
+        }
+    }
+
+    static decimal GetPositiveDecimal(string prompt)
+    {
+        while (true)
+        {
+            Console.Write(prompt);
+            if (decimal.TryParse(Console.ReadLine(), out var amount) && amount >= 0) return amount;
+            Console.WriteLine("Invalid amount.");
+        }
+    }
+    static void Pause(string? message = null) { if (!string.IsNullOrWhiteSpace(message)) Console.WriteLine(message); Console.ReadKey(); }
 }

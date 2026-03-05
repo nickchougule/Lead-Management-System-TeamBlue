@@ -1,0 +1,196 @@
+﻿IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+BEGIN
+    CREATE TABLE [__EFMigrationsHistory] (
+        [MigrationId] nvarchar(150) NOT NULL,
+        [ProductVersion] nvarchar(32) NOT NULL,
+        CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+    );
+END;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226193747_InitialCreate'
+)
+BEGIN
+    CREATE TABLE [SalesRepresentatives] (
+        [RepId] int NOT NULL IDENTITY,
+        [Name] nvarchar(max) NOT NULL,
+        [Email] nvarchar(max) NOT NULL,
+        [Department] nvarchar(max) NOT NULL,
+        CONSTRAINT [PK_SalesRepresentatives] PRIMARY KEY ([RepId])
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226193747_InitialCreate'
+)
+BEGIN
+    CREATE TABLE [Leads] (
+        [LeadId] int NOT NULL IDENTITY,
+        [Name] nvarchar(max) NOT NULL,
+        [Email] nvarchar(max) NULL,
+        [Phone] nvarchar(max) NULL,
+        [Company] nvarchar(max) NULL,
+        [Position] nvarchar(max) NULL,
+        [Status] nvarchar(max) NOT NULL,
+        [Source] nvarchar(max) NOT NULL,
+        [Priority] nvarchar(max) NOT NULL,
+        [CreatedDate] datetime2 NOT NULL,
+        [AssignedToRepId] int NULL,
+        CONSTRAINT [PK_Leads] PRIMARY KEY ([LeadId]),
+        CONSTRAINT [FK_Leads_SalesRepresentatives_AssignedToRepId] FOREIGN KEY ([AssignedToRepId]) REFERENCES [SalesRepresentatives] ([RepId]) ON DELETE SET NULL
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226193747_InitialCreate'
+)
+BEGIN
+    CREATE TABLE [Interactions] (
+        [InteractionId] int NOT NULL IDENTITY,
+        [InteractionType] nvarchar(max) NOT NULL,
+        [Details] nvarchar(max) NOT NULL,
+        [InteractionDate] datetime2 NOT NULL,
+        [FollowUpDate] datetime2 NULL,
+        [LeadId] int NOT NULL,
+        CONSTRAINT [PK_Interactions] PRIMARY KEY ([InteractionId]),
+        CONSTRAINT [FK_Interactions_Leads_LeadId] FOREIGN KEY ([LeadId]) REFERENCES [Leads] ([LeadId]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226193747_InitialCreate'
+)
+BEGIN
+    CREATE TABLE [Quotations] (
+        [QuoteId] int NOT NULL IDENTITY,
+        [QuoteNumber] nvarchar(max) NOT NULL,
+        [QuoteDate] datetime2 NOT NULL,
+        [ExpiryDate] datetime2 NULL,
+        [Status] nvarchar(max) NOT NULL,
+        [TotalAmount] decimal(18,2) NOT NULL,
+        [LeadId] int NOT NULL,
+        CONSTRAINT [PK_Quotations] PRIMARY KEY ([QuoteId]),
+        CONSTRAINT [FK_Quotations_Leads_LeadId] FOREIGN KEY ([LeadId]) REFERENCES [Leads] ([LeadId]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226193747_InitialCreate'
+)
+BEGIN
+    CREATE INDEX [IX_Interactions_LeadId] ON [Interactions] ([LeadId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226193747_InitialCreate'
+)
+BEGIN
+    CREATE INDEX [IX_Leads_AssignedToRepId] ON [Leads] ([AssignedToRepId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226193747_InitialCreate'
+)
+BEGIN
+    CREATE INDEX [IX_Quotations_LeadId] ON [Quotations] ([LeadId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226193747_InitialCreate'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260226193747_InitialCreate', N'8.0.24');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226201902_AddCustomerWorkflow'
+)
+BEGIN
+    CREATE TABLE [Customers] (
+        [CustomerId] int NOT NULL IDENTITY,
+        [Name] nvarchar(max) NOT NULL,
+        [Email] nvarchar(max) NULL,
+        [Company] nvarchar(max) NULL,
+        [ConvertedOn] datetime2 NOT NULL,
+        [LeadId] int NOT NULL,
+        CONSTRAINT [PK_Customers] PRIMARY KEY ([CustomerId]),
+        CONSTRAINT [FK_Customers_Leads_LeadId] FOREIGN KEY ([LeadId]) REFERENCES [Leads] ([LeadId]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226201902_AddCustomerWorkflow'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_Customers_LeadId] ON [Customers] ([LeadId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226201902_AddCustomerWorkflow'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260226201902_AddCustomerWorkflow', N'8.0.24');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226212929_AddConvertedByRepToCustomer'
+)
+BEGIN
+    ALTER TABLE [Customers] ADD [ConvertedByRepId] int NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260226212929_AddConvertedByRepToCustomer'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260226212929_AddConvertedByRepToCustomer', N'8.0.24');
+END;
+GO
+
+COMMIT;
+GO
+
